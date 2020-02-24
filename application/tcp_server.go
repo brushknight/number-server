@@ -13,7 +13,7 @@ type TcpServer struct {
 	maxClientsCount           int64
 	triggerTerminationChannel chan string
 	terminationChannel        chan struct{}
-	logger                    Logger
+	logger                    LoggerInterface
 }
 
 func (s *TcpServer) StartListening(handler MessageHandlerInterface) {
@@ -112,7 +112,7 @@ func (s *TcpServer) handleConnection(c net.Conn, clientsCounter *int64, handler 
 	}
 }
 
-func NewTcpServer(interfaceToListen string, maxClientsCount int64, triggerTerminationChannel chan string, terminationChannel chan struct{}, logger Logger) *TcpServer {
+func NewTcpServer(interfaceToListen string, maxClientsCount int64, triggerTerminationChannel chan string, terminationChannel chan struct{}, logger LoggerInterface) *TcpServer {
 	return &TcpServer{
 		interfaceToListen:         interfaceToListen,
 		maxClientsCount:           maxClientsCount,

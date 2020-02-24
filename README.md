@@ -1,6 +1,6 @@
 # Number server
 
-This project contains TCP server that process 9 digit numbers from clients, find all uniques and store them into a log file.
+This is an application that opens a socket and restricts input to at most 5 concurrent clients. Clients will connect to the Application and write any number of 9 digit numbers, and then close the connection. The Application must write a de-duplicated list of these numbers to a log file in no particular order.
 
 ## Prepare (build)
 clone this project to folder number-server into your $GOPATH and build
@@ -24,6 +24,10 @@ clone this project to folder number-server into your $GOPATH and build
 `-log-file` - path to a log file (default ./numbers.log)
 
 `-env` - an environment (default prd, allowed prd, dev)
+
+## Code structure
+
+![code_structure](resources/images/code_structure.png)
 
 ## Tester
 @TBD (add link to tester repository)

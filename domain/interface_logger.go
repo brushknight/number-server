@@ -1,6 +1,6 @@
 package domain
 
-type Logger interface {
+type LoggerInterface interface {
 	Debug(message string)
 	Info(message string)
 	Warn(message string)

@@ -9,11 +9,11 @@ import (
 
 type Processor struct {
 	numbersQueue chan uint64
-	storage          NumberStorageInterface
-	reporter         ReporterInterface
-	dumper           DumperInterface
-	wgServer         *sync.WaitGroup
-	logger           Logger
+	storage      NumberStorageInterface
+	reporter     ReporterInterface
+	dumper       DumperInterface
+	wgServer     *sync.WaitGroup
+	logger       LoggerInterface
 }
 
 func (p *Processor) StartProcessing() {
@@ -67,7 +67,7 @@ func (p *Processor) StartProcessing() {
 	}
 }
 
-func NewProcessor(numbersQueue chan uint64, reporter ReporterInterface, dumper DumperInterface, wgServer *sync.WaitGroup, logger Logger) *Processor {
+func NewProcessor(numbersQueue chan uint64, reporter ReporterInterface, dumper DumperInterface, wgServer *sync.WaitGroup, logger LoggerInterface) *Processor {
 
 	storage := memory.NewNumberStorage()
 	return &Processor{numbersQueue: numbersQueue, storage: storage, reporter: reporter, dumper: dumper, wgServer: wgServer, logger: logger}

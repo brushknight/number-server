@@ -23,8 +23,12 @@ func (s *TcpServer) StartListening(handler MessageHandlerInterface) {
 		s.logger.Error(fmt.Sprintf("%e", err))
 		return
 	}
-	// @TODO unhandled error
-	defer l.Close()
+	defer func() {
+		err := l.Close()
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("%e", err))
+		}
+	}()
 
 	s.logger.Debug(fmt.Sprintf("[✔] Server started serving on %s, max %d clients", s.interfaceToListen, s.maxClientsCount))
 
@@ -47,8 +51,11 @@ func (s *TcpServer) StartListening(handler MessageHandlerInterface) {
 		}
 
 		if clientsCounter >= s.maxClientsCount {
-			// @TODO unhandled error
-			c.Close()
+			err := c.Close()
+			if err != nil {
+				s.logger.Error(fmt.Sprintf("%e", err))
+			}
+
 			s.logger.Debug(fmt.Sprintf("Maximum of %d clients reached: %d", s.maxClientsCount, clientsCounter))
 
 			continue
@@ -63,8 +70,12 @@ func (s *TcpServer) StartListening(handler MessageHandlerInterface) {
 
 func (s *TcpServer) handleConnection(c net.Conn, clientsCounter *int64, handler MessageHandlerInterface) {
 
-	// @TODO unhandled error
-	defer c.Close()
+	defer func() {
+		err := c.Close()
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("%e", err))
+		}
+	}()
 	defer atomic.AddInt64(clientsCounter, -1)
 
 	channelReader := bufio.NewReader(c)

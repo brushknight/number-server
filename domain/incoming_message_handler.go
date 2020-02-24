@@ -20,7 +20,7 @@ func (h *IncomingMessageHandler) ValidateAndParse(message string) (uint64, error
 	messageLength := len(message)
 
 	if messageLength != 9 {
-		return 0, errors.New(fmt.Sprintf("message should be 9 symbols length, got %d message: %s", len(message), message))
+		return 0, errors.New(fmt.Sprintf("message should be 9 symbols length, got %d message: %s", messageLength, message))
 	}
 
 	number, err := strconv.ParseUint(message, 10, 64)

@@ -2,17 +2,21 @@
 
 This is an application that opens a socket and restricts input to at most 5 concurrent clients. Clients will connect to the Application and write any number of 9 digit numbers, and then close the connection. The Application must write a de-duplicated list of these numbers to a log file in no particular order.
 
+## Tester
+[Tester](https://github.com/brushknight/number-server-tester)
+: TCP client that sends valid and invalid messages to this server
+
 ## Prepare (build)
 clone this project to folder number-server into your $GOPATH and build
 1. `git clone git@github.com:brushknight/number-server.git ~/go/src/number-server`
 2. `cd ./number-server`
-3. `go build number-server.go`
+3. `go build number_server.go`
 
 ## Tests
 1. `go test ./...`
 
 ## Run
-1. `./number-server` 
+1. `./number_server` 
 
 ### Additional flags
 `-h` - HELP for flags
@@ -31,7 +35,7 @@ clone this project to folder number-server into your $GOPATH and build
 
 ### Flag usage
 
-`./number-server -max-clients=3` - will set max concurrent clients to 3
+`./number_server -max-clients=3` - will set max concurrent clients to 3
 
 ## Code structure
 
@@ -40,7 +44,3 @@ clone this project to folder number-server into your $GOPATH and build
 ## Application design
 
 ![application_design](resources/images/application_design.png)
-
-
-## Tester
-@TBD (add link to tester repository)

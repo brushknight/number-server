@@ -9,6 +9,7 @@ import (
 	"number-server/infrastructure/dumper/file"
 	loggerStdout "number-server/infrastructure/logger/stdout"
 	reporterStdout "number-server/infrastructure/reporter/stdout"
+	"number-server/infrastructure/storage/memory"
 	"sync"
 	"time"
 )
@@ -42,6 +43,8 @@ func main() {
 
 	wgServer := sync.WaitGroup{}
 
+	storage := memory.NewNumberStorage()
+
 	logger := loggerStdout.NewLogger(*env)
 
 	go infrastructure.Terminator(triggerTerminationChannel, terminationChannel, numbersQueue, logger)
@@ -58,7 +61,7 @@ func main() {
 	logger.Debug("[✔] DumperSteady created")
 
 	wgServer.Add(1)
-	processor := domain.NewProcessor(numbersQueue, reporter, dumper, &wgServer, logger)
+	processor := domain.NewProcessor(numbersQueue, storage, reporter, dumper, &wgServer, triggerTerminationChannel, logger)
 	logger.Debug("[✔] Message processor created")
 
 	go processor.StartProcessing()
@@ -70,4 +73,6 @@ func main() {
 	go server.StartListening(handler)
 
 	wgServer.Wait()
+
+	processor.DoReport()
 }

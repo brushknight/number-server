@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-// @todo add negative cases
-
 func TestNumberStorage_AddNumber_Basics(t *testing.T) {
 
 	storage := NewNumberStorage()

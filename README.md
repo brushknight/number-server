@@ -19,11 +19,17 @@ clone this project to folder number-server into your $GOPATH and build
 
 `-max-clients` - maximum of concurrent clients (default 5)
 
+`-reporter-timeout` - frequency of report in seconds (default 10)
+
 `-interface` - an interface to startup (default 0.0.0.0:4000)
 
 `-log-file` - path to a log file (default ./numbers.log)
 
 `-env` - an environment (default prd, allowed prd, dev)
+
+### Flag usage
+
+`./number-server -max-clients=3` - will set max concurrent clients to 3
 
 ## Code structure
 

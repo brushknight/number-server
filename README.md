@@ -29,5 +29,10 @@ clone this project to folder number-server into your $GOPATH and build
 
 ![code_structure](resources/images/code_structure.png)
 
+## Application design
+
+![application_design](resources/images/application_design.png)
+
+
 ## Tester
 @TBD (add link to tester repository)

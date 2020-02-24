@@ -2,11 +2,11 @@ package infrastructure
 
 import (
 	"fmt"
-	"number-server/infrastructure/logger/stdout"
+	"number-server/infrastructure/logger"
 	"time"
 )
 
-func Terminator(triggerTerminationChannel chan string, terminationChannel chan struct{}, messagesQueue chan uint64, logger stdout.Logger) {
+func Terminator(triggerTerminationChannel chan string, terminationChannel chan struct{}, messagesQueue chan uint64, logger logger.LoggerInterface) {
 	stoppedBy := <-triggerTerminationChannel
 	logger.Debug(fmt.Sprintf("[x] Application termination initialized by: %s", stoppedBy))
 	close(terminationChannel)

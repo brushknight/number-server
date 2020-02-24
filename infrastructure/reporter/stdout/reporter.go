@@ -2,13 +2,13 @@ package stdout
 
 import (
 	"fmt"
-	"number-server/infrastructure/logger/stdout"
+	"number-server/infrastructure/logger"
 	"time"
 )
 
 type Reporter struct {
 	frequencyMs time.Duration
-	logger      stdout.Logger
+	logger      logger.LoggerInterface
 	env         string
 }
 
@@ -26,6 +26,6 @@ func (r *Reporter) GetFrequencyMs() time.Duration {
 	return r.frequencyMs
 }
 
-func NewReporter(frequencyMs time.Duration, logger stdout.Logger, env string) *Reporter {
+func NewReporter(frequencyMs time.Duration, logger logger.LoggerInterface, env string) *Reporter {
 	return &Reporter{frequencyMs: frequencyMs, logger: logger, env: env}
 }

@@ -27,6 +27,8 @@ clone this project to folder number-server into your $GOPATH and build
 
 `-env` - an environment (default prd, allowed prd, dev)
 
+`-leading-zeros` - enabling leading zeros in the log file (default true)
+
 ### Flag usage
 
 `./number-server -max-clients=3` - will set max concurrent clients to 3

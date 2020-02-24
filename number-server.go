@@ -20,6 +20,7 @@ func main() {
 	interfaceToStart := flag.String("interface", "0.0.0.0:4000", "an interface to startup")
 	env := flag.String("env", "prd", "env, allowed: prd, dev ")
 	logFilePath := flag.String("log-file", "./numbers.log", "path to log a file")
+	isLeadingZeros := flag.Bool("leading-zeros", true, "add leading zeros to ./numbers.log or not")
 
 	flag.Parse()
 
@@ -43,18 +44,18 @@ func main() {
 
 	logger := loggerStdout.NewLogger(*env)
 
-	go infrastructure.Terminator(triggerTerminationChannel, terminationChannel, numbersQueue, *logger)
+	go infrastructure.Terminator(triggerTerminationChannel, terminationChannel, numbersQueue, logger)
 	logger.Debug("[✔] Application terminator created")
 
 	handler := domain.NewMessageHandler(numbersQueue, triggerTerminationChannel)
 	logger.Debug("[✔] Message handler created")
 
-	reporter := reporterStdout.NewReporter(time.Duration(*reporterTimeout*1000), *logger, *env)
+	reporter := reporterStdout.NewReporter(time.Duration(*reporterTimeout*1000), logger, *env)
 	logger.Debug("[✔] Reporter created")
 
 	wgServer.Add(1)
-	dumper := file.NewDumper(*logFilePath, &wgServer, *logger)
-	logger.Debug("[✔] Dumper created")
+	dumper := file.NewDumper(*logFilePath, &wgServer, logger, *isLeadingZeros)
+	logger.Debug("[✔] DumperSteady created")
 
 	wgServer.Add(1)
 	processor := domain.NewProcessor(numbersQueue, reporter, dumper, &wgServer, logger)

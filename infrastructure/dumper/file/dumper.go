@@ -1,29 +1,33 @@
 package file
 
 import (
+	"bufio"
 	"fmt"
-	"number-server/infrastructure/logger/stdout"
+	"number-server/infrastructure/logger"
 	"os"
 	"sync"
 )
 
 type Dumper struct {
-	filePath string
-	wgServer *sync.WaitGroup
-	logger   stdout.Logger
+	filePath       string
+	wgServer       *sync.WaitGroup
+	logger         logger.LoggerInterface
+	writerTemplate string
 }
 
 func (d *Dumper) ProcessChannel(c chan uint64) {
 
 	defer d.wgServer.Done()
 
-	var dumpChunk []uint64
-
 	var file, err = os.OpenFile(d.filePath, os.O_RDWR, 0644)
 	if err != nil {
 		d.logger.Critical(fmt.Sprintf("%e", err))
 	}
 	defer file.Close()
+
+	w := bufio.NewWriter(file)
+
+	defer d.syncWriterStream(w)
 
 	for {
 		for i := 0; i < 10000; i++ {
@@ -34,34 +38,31 @@ func (d *Dumper) ProcessChannel(c chan uint64) {
 				return
 			}
 
-			dumpChunk = append(dumpChunk, number)
+			d.writeNumberViaWriterStream(number, w)
 		}
 
-		d.writeDownToFile(dumpChunk, file)
-		dumpChunk = nil
+		d.syncWriterStream(w)
 	}
 }
 
-func (d *Dumper) writeDownToFile(dumpChunk []uint64, file *os.File) {
-	var dumpChunkString string
-
-	for i := 0; i < len(dumpChunk); i++ {
-		dumpChunkString += fmt.Sprintf("%d\n", dumpChunk[i])
-	}
-
-	_, errWrite := file.WriteString(dumpChunkString)
-	if errWrite != nil {
-		d.logger.Critical(fmt.Sprintf("%e", errWrite))
-	}
-
-	err := file.Sync()
-	if err != nil {
-		d.logger.Critical(fmt.Sprintf("%e", err))
-	}
+func (d *Dumper) writeNumberViaWriterStream(number uint64, writer *bufio.Writer) int {
+	numberOfBytesWritten, _ := writer.WriteString(fmt.Sprintf(d.writerTemplate, number))
+	return numberOfBytesWritten
 }
 
-func NewDumper(filePath string, wgServer *sync.WaitGroup, logger stdout.Logger) *Dumper {
+func (d *Dumper) syncWriterStream(writer *bufio.Writer) bool {
+	errWriter := writer.Flush()
+	if errWriter != nil {
+		d.logger.Critical(fmt.Sprintf("%e", errWriter))
+		return false
+	}
+
+	return true
+}
+
+func NewDumper(filePath string, wgServer *sync.WaitGroup, logger logger.LoggerInterface, isLeadingZeros bool) *Dumper {
 	var file, err = os.Create(filePath)
+
 	if err != nil {
 		logger.Critical(fmt.Sprintf("%e", err))
 	}
@@ -69,5 +70,12 @@ func NewDumper(filePath string, wgServer *sync.WaitGroup, logger stdout.Logger) 
 
 	logger.Debug(fmt.Sprintf("[✔] File Successfully created and erased - %s", filePath))
 
-	return &Dumper{filePath: filePath, wgServer: wgServer, logger: logger}
+	var writerTemplate string
+	if isLeadingZeros {
+		writerTemplate = "%09d\n"
+	} else {
+		writerTemplate = "%d\n"
+	}
+
+	return &Dumper{filePath: filePath, wgServer: wgServer, logger: logger, writerTemplate: writerTemplate}
 }

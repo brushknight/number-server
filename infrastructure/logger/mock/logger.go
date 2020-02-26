@@ -23,6 +23,6 @@ func (l *Logger) Critical(message string) {
 	l.LastMessage = "[CRITICAL] " + message
 }
 
-func NewLogger() *Logger {
+func NewMockLogger() *Logger {
 	return &Logger{}
 }

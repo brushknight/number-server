@@ -2,7 +2,6 @@ package domain
 
 import (
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -11,7 +10,6 @@ type Processor struct {
 	storage                                 NumberStorageInterface
 	reporter                                ReporterInterface
 	dumper                                  DumperInterface
-	wgServer                                *sync.WaitGroup
 	triggerTerminationChannel               chan string
 	logger                                  LoggerInterface
 	totalNumbersProcesses                   uint64
@@ -19,17 +17,12 @@ type Processor struct {
 	duplicateNumbersProcessesFromLastReport uint64
 }
 
-func (p *Processor) StartProcessing() {
-
-	defer p.wgServer.Done()
+func (p *Processor) StartProcessing(dumperQueue chan uint64) {
 
 	ticker := time.NewTicker(p.reporter.GetFrequencyMs() * time.Millisecond)
 	defer ticker.Stop()
 
-	dumperQueue := make(chan uint64)
 	defer close(dumperQueue)
-
-	go p.dumper.ProcessChannel(dumperQueue)
 
 	for {
 		select {
@@ -80,6 +73,6 @@ func (p *Processor) terminate() {
 	p.triggerTerminationChannel <- "number processor"
 }
 
-func NewProcessor(numbersQueue chan uint64, storage NumberStorageInterface, reporter ReporterInterface, dumper DumperInterface, wgServer *sync.WaitGroup, triggerTerminationChannel chan string, logger LoggerInterface) *Processor {
-	return &Processor{numbersQueue: numbersQueue, storage: storage, reporter: reporter, dumper: dumper, wgServer: wgServer, triggerTerminationChannel: triggerTerminationChannel, logger: logger}
+func NewProcessor(numbersQueue chan uint64, storage NumberStorageInterface, reporter ReporterInterface,  triggerTerminationChannel chan string, logger LoggerInterface) *Processor {
+	return &Processor{numbersQueue: numbersQueue, storage: storage, reporter: reporter, triggerTerminationChannel: triggerTerminationChannel, logger: logger}
 }

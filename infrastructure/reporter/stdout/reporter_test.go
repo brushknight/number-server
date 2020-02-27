@@ -9,7 +9,7 @@ import (
 
 func TestReporter_MakeAReport(t *testing.T) {
 
-	logger := mock.NewLogger()
+	logger := mock.NewMockLogger()
 
 	reporter := NewReporter(10*time.Millisecond, logger, "prd")
 

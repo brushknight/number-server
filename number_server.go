@@ -66,10 +66,7 @@ func main() {
 	go func() {
 		defer wgServer.Done()
 
-		var file, err = os.OpenFile(*logFilePath, os.O_RDWR, 0644)
-		if err != nil {
-			logger.Critical(fmt.Sprintf("%e", err))
-		}
+		file := createAndOpenDumperFile(*logFilePath, logger)
 		defer file.Close()
 
 		fileWriter := bufio.NewWriter(file)
@@ -97,4 +94,20 @@ func main() {
 	wgServer.Wait()
 
 	processor.DoReport()
+}
+
+func createAndOpenDumperFile(dumperFilePath string, logger domain.LoggerInterface) *os.File {
+	var createdFile, err = os.Create(dumperFilePath)
+
+	if err != nil {
+		logger.Critical(fmt.Sprintf("%e", err))
+	}
+	createdFile.Close()
+
+	file, err := os.OpenFile(dumperFilePath, os.O_RDWR, 0644)
+	if err != nil {
+		logger.Critical(fmt.Sprintf("%e", err))
+	}
+
+	return file
 }

@@ -1,19 +1,17 @@
 package mock
 
-import "sync"
+import "bufio"
 
 type Dumper struct {
-	wgServer      *sync.WaitGroup
 	NumbersDumped []uint64
 }
 
-func (d *Dumper) ProcessChannel(c chan uint64) {
-	defer d.wgServer.Done()
-	for number := range c {
+func (d *Dumper) ProcessChannel(dumperInQueue chan uint64, writer *bufio.Writer) {
+	for number := range dumperInQueue {
 		d.NumbersDumped = append(d.NumbersDumped, number)
 	}
 }
 
-func NewMockDumper(wgServer *sync.WaitGroup) *Dumper {
-	return &Dumper{wgServer: wgServer}
+func NewMockDumper() *Dumper {
+	return &Dumper{}
 }

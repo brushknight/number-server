@@ -1,5 +1,7 @@
 package domain
 
+import "bufio"
+
 type DumperInterface interface {
-	ProcessChannel(c chan uint64)
+	ProcessChannel(inChannel chan uint64, writer *bufio.Writer)
 }

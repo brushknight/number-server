@@ -7,12 +7,12 @@ import (
 )
 
 type IncomingMessageHandler struct {
-	queue                     chan uint64
+	numbersQueue                     chan uint64
 	triggerTerminationChannel chan string
 }
 
 func (h *IncomingMessageHandler) Handle(number uint64) {
-	h.queue <- number
+	h.numbersQueue <- number
 }
 
 func (h *IncomingMessageHandler) ValidateAndParse(message string) (uint64, error) {
@@ -36,6 +36,6 @@ func (h *IncomingMessageHandler) Terminate() {
 	h.triggerTerminationChannel <- "client messages handler"
 }
 
-func NewMessageHandler(queue chan uint64, triggerTerminationChannel chan string) *IncomingMessageHandler {
-	return &IncomingMessageHandler{queue: queue, triggerTerminationChannel: triggerTerminationChannel}
+func NewMessageHandler(numbersQueue chan uint64, triggerTerminationChannel chan string) *IncomingMessageHandler {
+	return &IncomingMessageHandler{numbersQueue: numbersQueue, triggerTerminationChannel: triggerTerminationChannel}
 }

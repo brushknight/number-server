@@ -13,6 +13,8 @@ type Dumper struct {
 
 func (d *Dumper) ProcessChannel(dumperInQueue chan uint64, writer *bufio.Writer) {
 	for number := range dumperInQueue {
+		d.logger.Trace(fmt.Sprintf("Dumper received: %d", number))
+
 		_, writeError := writer.WriteString(fmt.Sprintf(d.template, number))
 
 		if writeError != nil {

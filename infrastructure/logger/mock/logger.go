@@ -4,6 +4,10 @@ type Logger struct {
 	LastMessage string
 }
 
+func (l *Logger) Trace(message string) {
+	l.LastMessage = "[TRACE] " + message
+}
+
 func (l *Logger) Debug(message string) {
 	l.LastMessage = "[DEBUG] " + message
 }

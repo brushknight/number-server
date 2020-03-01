@@ -6,66 +6,62 @@ import (
 )
 
 type Processor struct {
-	numbersQueue                            chan uint64
 	storage                                 NumberStorageInterface
-	reporter                                ReporterInterface
-	dumper                                  DumperInterface
-	triggerTerminationChannel               chan string
 	logger                                  LoggerInterface
+	triggerTerminationChannel               chan string
 	totalNumbersProcesses                   uint64
 	uniqNumbersProcessedFromLastReport      uint64
 	duplicateNumbersProcessesFromLastReport uint64
 }
 
-func (p *Processor) StartProcessing(dumperQueue chan uint64) {
-
-	ticker := time.NewTicker(p.reporter.GetFrequencyMs() * time.Millisecond)
-	defer ticker.Stop()
-
+func (p *Processor) ProcessChannel(numbersQueue chan uint64, dumperQueue chan uint64, reportTriggerChannel <-chan time.Time, reportsQueue chan ReportDTO) {
 	defer close(dumperQueue)
+	defer close(reportsQueue)
 
 	for {
 		select {
-		case number, ok := <-p.numbersQueue:
+		case number, ok := <-numbersQueue:
+			p.logger.Trace(fmt.Sprintf("Processor: Get number %d", number))
 
 			if !ok {
 				p.logger.Debug("[x] Terminating messages processor")
 				return
 			}
 
-			p.processNumber(number, dumperQueue)
-		case <-ticker.C:
-			p.DoReport()
+			if p.storage.IsNumberExists(number) {
+				p.duplicateNumbersProcessesFromLastReport++
+			} else {
+				status, err := p.storage.AddNumber(number)
+
+				if err != nil {
+					p.logger.Error(fmt.Sprintf("%e", err))
+					p.terminate()
+				}
+				if !status {
+					p.logger.Error(fmt.Sprintf("number was not inserted %d", number))
+					p.terminate()
+				}
+
+				dumperQueue <- number
+				p.logger.Trace(fmt.Sprintf("Processor: Sent to dumer queue %d", number))
+				p.uniqNumbersProcessedFromLastReport++
+			}
+
+			p.totalNumbersProcesses++
+		case _, ok := <-reportTriggerChannel:
+			if !ok {
+				p.logger.Debug("[x] Terminating messages processor")
+				return
+			}
+			p.doReport(reportsQueue)
 		}
 	}
 }
 
-func (p *Processor) DoReport() {
-	p.reporter.MakeAReport(p.uniqNumbersProcessedFromLastReport, p.duplicateNumbersProcessesFromLastReport, p.storage.GetLength(), p.totalNumbersProcesses)
+func (p *Processor) doReport(reportsQueue chan ReportDTO) {
+	reportsQueue <- CreateReportDTO(p.storage.GetLength(), p.uniqNumbersProcessedFromLastReport, p.duplicateNumbersProcessesFromLastReport, p.totalNumbersProcesses)
 	p.uniqNumbersProcessedFromLastReport = 0
 	p.duplicateNumbersProcessesFromLastReport = 0
-}
-
-func (p *Processor) processNumber(number uint64, dumperQueue chan uint64) {
-	if p.storage.IsNumberExists(number) {
-		p.duplicateNumbersProcessesFromLastReport++
-	} else {
-		status, err := p.storage.AddNumber(number)
-
-		if err != nil {
-			p.logger.Error(fmt.Sprintf("%e", err))
-			p.terminate()
-		}
-		if !status {
-			p.logger.Error(fmt.Sprintf("number was not inserted %d", number))
-			p.terminate()
-		}
-
-		dumperQueue <- number
-		p.uniqNumbersProcessedFromLastReport++
-	}
-
-	p.totalNumbersProcesses++
 }
 
 func (p *Processor) terminate() {
@@ -73,6 +69,6 @@ func (p *Processor) terminate() {
 	p.triggerTerminationChannel <- "number processor"
 }
 
-func NewProcessor(numbersQueue chan uint64, storage NumberStorageInterface, reporter ReporterInterface,  triggerTerminationChannel chan string, logger LoggerInterface) *Processor {
-	return &Processor{numbersQueue: numbersQueue, storage: storage, reporter: reporter, triggerTerminationChannel: triggerTerminationChannel, logger: logger}
+func NewProcessor(storage NumberStorageInterface, triggerTerminationChannel chan string, logger LoggerInterface) *Processor {
+	return &Processor{storage: storage, triggerTerminationChannel: triggerTerminationChannel, logger: logger}
 }

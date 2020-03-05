@@ -59,7 +59,7 @@ func (p *Processor) ProcessChannel(numbersQueue chan uint64, dumperQueue chan ui
 }
 
 func (p *Processor) doReport(reportsQueue chan ReportDTO) {
-	reportsQueue <- CreateReportDTO(p.storage.GetLength(), p.uniqNumbersProcessedFromLastReport, p.duplicateNumbersProcessesFromLastReport, p.totalNumbersProcesses)
+	reportsQueue <- CreateReportDTO(p.storage.GetLength(), p.uniqNumbersProcessedFromLastReport, p.duplicateNumbersProcessesFromLastReport, p.totalNumbersProcesses, 0)
 	p.uniqNumbersProcessedFromLastReport = 0
 	p.duplicateNumbersProcessesFromLastReport = 0
 }

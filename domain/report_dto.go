@@ -1,16 +1,18 @@
 package domain
 
 type ReportDTO struct {
-	uniqNumbersTotal               uint64
-	uniqNumbersFromLastReport      uint64
-	duplicateNumbersFromLastReport uint64
-	allNumbersTotal                uint64
+	UniqNumbersTotal               uint64
+	UniqNumbersFromLastReport      uint64
+	DuplicateNumbersFromLastReport uint64
+	AllNumbersTotal                uint64
+	Rps                            uint64
 }
 
-func CreateReportDTO(uniqNumbersTotal uint64, uniqNumbersFromLastReport uint64, duplicateNumbersFromLastReport uint64, allNumbersTotal uint64) ReportDTO {
+func CreateReportDTO(uniqNumbersTotal uint64, uniqNumbersFromLastReport uint64, duplicateNumbersFromLastReport uint64, allNumbersTotal uint64, rps uint64) ReportDTO {
 	return ReportDTO{
-		uniqNumbersTotal:               uniqNumbersTotal,
-		uniqNumbersFromLastReport:      uniqNumbersFromLastReport,
-		duplicateNumbersFromLastReport: duplicateNumbersFromLastReport,
-		allNumbersTotal:                allNumbersTotal}
+		UniqNumbersTotal:               uniqNumbersTotal,
+		UniqNumbersFromLastReport:      uniqNumbersFromLastReport,
+		DuplicateNumbersFromLastReport: duplicateNumbersFromLastReport,
+		AllNumbersTotal:                allNumbersTotal,
+		Rps:                            rps}
 }

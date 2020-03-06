@@ -9,6 +9,7 @@ import (
 	"number-server/infrastructure"
 	"number-server/infrastructure/dumper/bufio_based"
 	loggerStdout "number-server/infrastructure/logger/stdout"
+	"number-server/infrastructure/reporter/stdout"
 	"number-server/infrastructure/storage/memory"
 	"os"
 	"sync"
@@ -57,8 +58,12 @@ func main() {
 	handler := domain.NewMessageHandler(numbersQueue, triggerTerminationChannel)
 	logger.Debug("[✔] Message handler created")
 
-	//reporter := reporterStdout.NewReporter(time.Duration(*reporterTimeout*1000), logger, *env)
-	//logger.Debug("[✔] Reporter created")
+	wgServer.Add(1)
+	go func() {
+		defer wgServer.Done()
+
+		stdout.ProcessReportsChannel(reportsQueue, os.Stdout, *env)
+	}()
 
 	wgServer.Add(1)
 	dumper := bufio_based.NewDumper(*isLeadingZeros, logger)
@@ -93,8 +98,6 @@ func main() {
 	go server.StartListening(handler)
 
 	wgServer.Wait()
-
-	//processor.DoReport()
 }
 
 func createAndOpenDumperFile(dumperFilePath string, logger domain.LoggerInterface) *os.File {

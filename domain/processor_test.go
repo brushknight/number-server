@@ -57,20 +57,20 @@ func TestProcessor_ProcessChannel(t *testing.T) {
 
 		report := reports[0]
 
-		if report.allNumbersTotal != 8 {
-			t.Errorf("Report: Expected to have total = %d in report, got %d", 8, report.allNumbersTotal)
+		if report.AllNumbersTotal != 8 {
+			t.Errorf("Report: Expected to have total = %d in report, got %d", 8, report.AllNumbersTotal)
 		}
 
-		if report.uniqNumbersFromLastReport != 5 {
-			t.Errorf("Report: Expected to have uniqNumbersFromLastReport = %d in report, got %d", 5, report.uniqNumbersFromLastReport)
+		if report.UniqNumbersFromLastReport != 5 {
+			t.Errorf("Report: Expected to have uniqNumbersFromLastReport = %d in report, got %d", 5, report.UniqNumbersFromLastReport)
 		}
 
-		if report.uniqNumbersTotal != 5 {
-			t.Errorf("Report: Expected to have uniqNumbersTotal = %d in report, got %d", 5, report.uniqNumbersTotal)
+		if report.UniqNumbersTotal != 5 {
+			t.Errorf("Report: Expected to have uniqNumbersTotal = %d in report, got %d", 5, report.UniqNumbersTotal)
 		}
 
-		if report.duplicateNumbersFromLastReport != 3 {
-			t.Errorf("Report: Expected to have duplicateNumbersFromLastReport = %d in report, got %d", 3, report.duplicateNumbersFromLastReport)
+		if report.DuplicateNumbersFromLastReport != 3 {
+			t.Errorf("Report: Expected to have duplicateNumbersFromLastReport = %d in report, got %d", 3, report.DuplicateNumbersFromLastReport)
 		}
 
 	} else {

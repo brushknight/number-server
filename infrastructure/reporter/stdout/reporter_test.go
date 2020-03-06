@@ -1,28 +1,36 @@
 package stdout
 
 import (
+	"bytes"
 	"fmt"
-	"number-server/infrastructure/logger/mock"
+	"number-server/domain"
 	"testing"
-	"time"
 )
 
-func TestReporter_MakeAReport(t *testing.T) {
+func TestReporter_ProcessChannel(t *testing.T) {
 
-	logger := mock.NewMockLogger()
+	env := "prd"
 
-	reporter := NewReporter(10*time.Millisecond, logger, "prd")
+	reportsQueue := make(chan domain.ReportDTO, 10)
 
 	var uniqNumbersProcesses uint64 = 50
 	var duplicateNumbersProcesses uint64 = 2
 	var totalUniqNumbersProcesses uint64 = 567231
 
-	reporter.MakeAReport(uniqNumbersProcesses, duplicateNumbersProcesses, totalUniqNumbersProcesses, 1000000)
+	reportsQueue <- domain.CreateReportDTO(totalUniqNumbersProcesses, uniqNumbersProcesses, duplicateNumbersProcesses, totalUniqNumbersProcesses+duplicateNumbersProcesses, totalUniqNumbersProcesses+duplicateNumbersProcesses/10)
 
-	expectedMessage := fmt.Sprintf("[INFO] Received %d unique numbers, %d duplicates. Unique total: %d", uniqNumbersProcesses, duplicateNumbersProcesses, totalUniqNumbersProcesses)
+	close(reportsQueue)
 
-	if logger.LastMessage != expectedMessage {
-		t.Errorf("Expected message : %s, got: %s", expectedMessage, logger.LastMessage)
+	buffer := &bytes.Buffer{}
+
+	ProcessReportsChannel(reportsQueue, buffer, env)
+
+	expectedMessage := fmt.Sprintf("Received %d unique numbers, %d duplicates. Unique total: %d\n", uniqNumbersProcesses, duplicateNumbersProcesses, totalUniqNumbersProcesses)
+
+	got := buffer.String()
+
+	if got != expectedMessage {
+		t.Errorf("Expected message : %s, got: %s", expectedMessage, got)
 	}
 
 }

@@ -42,7 +42,6 @@ func (s *TcpServer) StartListening(handler MessageHandlerInterface) {
 		default:
 
 		}
-
 		c, err := l.Accept()
 
 		if err != nil {
@@ -64,11 +63,11 @@ func (s *TcpServer) StartListening(handler MessageHandlerInterface) {
 		atomic.AddInt64(&clientsCounter, 1)
 		s.logger.Debug(fmt.Sprintf("Clients count: %d", clientsCounter))
 
-		go s.handleConnection(c, &clientsCounter, handler)
+		go s.handleConnection(handler, c, &clientsCounter)
 	}
 }
 
-func (s *TcpServer) handleConnection(c net.Conn, clientsCounter *int64, handler MessageHandlerInterface) {
+func (s *TcpServer) handleConnection(handler MessageHandlerInterface, c net.Conn, clientsCounter *int64) {
 
 	defer func() {
 		err := c.Close()

@@ -2,30 +2,21 @@ package stdout
 
 import (
 	"fmt"
-	"number-server/infrastructure/logger"
-	"time"
+	"io"
+	"number-server/domain"
 )
 
-type Reporter struct {
-	frequencyMs time.Duration
-	logger      logger.LoggerInterface
-	env         string
-}
-
-func (r *Reporter) MakeAReport(uniqNumbersProcesses uint64, duplicateNumbersProcesses uint64, totalUniqNumbersProcesses uint64, totalNumbersProcesses uint64) {
-
-	if r.env == "prd" {
-		r.logger.Info(fmt.Sprintf("Received %d unique numbers, %d duplicates. Unique total: %d", uniqNumbersProcesses, duplicateNumbersProcesses, totalUniqNumbersProcesses))
-	} else {
-		rps := (duplicateNumbersProcesses + uniqNumbersProcesses) / uint64(r.frequencyMs/1000)
-		r.logger.Info(fmt.Sprintf("Received %d unique numbers, %d duplicates. Total %d Uniq: %d. Rps %d", uniqNumbersProcesses, duplicateNumbersProcesses, totalNumbersProcesses, totalUniqNumbersProcesses, rps))
+func ProcessReportsChannel(reportsQueue chan domain.ReportDTO, writer io.Writer, env string) {
+	for report := range reportsQueue {
+		writer.Write([]byte(buildReportString(report, env)))
 	}
 }
 
-func (r *Reporter) GetFrequencyMs() time.Duration {
-	return r.frequencyMs
-}
+func buildReportString(report domain.ReportDTO, env string) string {
 
-func NewReporter(frequencyMs time.Duration, logger logger.LoggerInterface, env string) *Reporter {
-	return &Reporter{frequencyMs: frequencyMs, logger: logger, env: env}
+	if env == "prd" {
+		return fmt.Sprintf("Received %d unique numbers, %d duplicates. Unique total: %d\n", report.UniqNumbersFromLastReport, report.DuplicateNumbersFromLastReport, report.UniqNumbersTotal)
+	} else {
+		return fmt.Sprintf("Received %d unique numbers, %d duplicates. Total %d Uniq: %d. Rps %d\n", report.UniqNumbersFromLastReport, report.DuplicateNumbersFromLastReport, report.UniqNumbersTotal, report.AllNumbersTotal, report.Rps)
+	}
 }

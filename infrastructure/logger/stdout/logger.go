@@ -9,11 +9,18 @@ type Logger struct {
 	env string
 }
 
+func (l *Logger) Trace(message string) {
+	if l.env == "dev" {
+		//logToStdout("[TRACE] " + message)
+	}
+}
+
 func (l *Logger) Debug(message string) {
 	if l.env == "dev" {
 		logToStdout("[DEBUG] " + message)
 	}
 }
+
 func (l *Logger) Info(message string) {
 	logToStdout("[INFO] " + message)
 

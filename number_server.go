@@ -1,15 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"number-server/application"
 	"number-server/domain"
 	"number-server/infrastructure"
-	"number-server/infrastructure/dumper/file"
+	"number-server/infrastructure/dumper/bufio_based"
 	loggerStdout "number-server/infrastructure/logger/stdout"
-	reporterStdout "number-server/infrastructure/reporter/stdout"
+	"number-server/infrastructure/reporter/stdout"
 	"number-server/infrastructure/storage/memory"
+	"os"
 	"sync"
 	"time"
 )
@@ -38,8 +40,11 @@ func main() {
 	}
 
 	numbersQueue := make(chan uint64, 1000*100)
+	dumperQueue := make(chan uint64, 1000*100)
+	reportsQueue := make(chan domain.ReportDTO, 10)
 	triggerTerminationChannel := make(chan string)
 	terminationChannel := make(chan struct{})
+	reportTriggerTicker := time.NewTicker(time.Duration(*reporterTimeout) * time.Second)
 
 	wgServer := sync.WaitGroup{}
 
@@ -53,18 +58,38 @@ func main() {
 	handler := domain.NewMessageHandler(numbersQueue, triggerTerminationChannel)
 	logger.Debug("[✔] Message handler created")
 
-	reporter := reporterStdout.NewReporter(time.Duration(*reporterTimeout*1000), logger, *env)
-	logger.Debug("[✔] Reporter created")
+	wgServer.Add(1)
+	go func() {
+		defer wgServer.Done()
+
+		stdout.ProcessReportsChannel(reportsQueue, os.Stdout, *env)
+	}()
 
 	wgServer.Add(1)
-	dumper := file.NewDumper(*logFilePath, &wgServer, logger, *isLeadingZeros)
-	logger.Debug("[✔] DumperSteady created")
+	dumper := bufio_based.NewDumper(*isLeadingZeros, logger)
+	logger.Debug("[✔] Dumper created")
+
+	go func() {
+		defer wgServer.Done()
+
+		file := createAndOpenDumperFile(*logFilePath, logger)
+		defer file.Close()
+
+		fileWriter := bufio.NewWriter(file)
+
+		dumper.ProcessChannel(dumperQueue, fileWriter)
+	}()
+	logger.Debug("[✔] Dumper started")
 
 	wgServer.Add(1)
-	processor := domain.NewProcessor(numbersQueue, storage, reporter, dumper, &wgServer, triggerTerminationChannel, logger)
+	processor := domain.NewProcessor(storage, triggerTerminationChannel, logger)
 	logger.Debug("[✔] Message processor created")
 
-	go processor.StartProcessing()
+	go func() {
+		defer wgServer.Done()
+		defer reportTriggerTicker.Stop()
+		processor.ProcessChannel(numbersQueue, dumperQueue, reportTriggerTicker.C, reportsQueue)
+	}()
 	logger.Debug("[✔] Message processor started")
 
 	server := application.NewTcpServer(*interfaceToStart, int64(*maxClientsCount), triggerTerminationChannel, terminationChannel, logger)
@@ -73,6 +98,20 @@ func main() {
 	go server.StartListening(handler)
 
 	wgServer.Wait()
+}
 
-	processor.DoReport()
+func createAndOpenDumperFile(dumperFilePath string, logger domain.LoggerInterface) *os.File {
+	var createdFile, err = os.Create(dumperFilePath)
+
+	if err != nil {
+		logger.Critical(fmt.Sprintf("%e", err))
+	}
+	createdFile.Close()
+
+	file, err := os.OpenFile(dumperFilePath, os.O_RDWR, 0644)
+	if err != nil {
+		logger.Critical(fmt.Sprintf("%e", err))
+	}
+
+	return file
 }

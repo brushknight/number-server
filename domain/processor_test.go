@@ -1,114 +1,136 @@
 package domain
 
 import (
-	mock3 "number-server/infrastructure/dumper/mock"
-	mock2 "number-server/infrastructure/logger/mock"
-	"number-server/infrastructure/reporter/mock"
-	"number-server/infrastructure/storage/memory"
-	"sync"
+	"fmt"
+	"number-server/infrastructure/logger/mock"
 	"testing"
 	"time"
 )
 
-func TestProcessor_DoReport(t *testing.T) {
+func TestProcessor_ProcessChannel(t *testing.T) {
 
-	wgServer := sync.WaitGroup{}
-	reporterMock := mock.NewMockReporter(10 * time.Second)
-	loggerMock := mock2.NewMockLogger()
-	dumperMock := mock3.NewMockDumper(&wgServer)
-	storage := memory.NewNumberStorage()
-	numbersQueue := make(chan uint64, 100)
+	// numbersInQueue is unbuffered because we need to fire and handle events in exact same order (synchronous)
+
+	storageMock := NewMockStorage()
 	triggerTerminationChannel := make(chan string)
+	loggerMock := mock.NewMockLogger()
+	numbersInQueue := make(chan uint64)
+	numbersOutQueue := make(chan uint64, 100)
+	reportsQueue := make(chan ReportDTO)
+	triggerReportChannel := make(chan time.Time)
 
-	processor := NewProcessor(numbersQueue, storage, reporterMock, dumperMock, &wgServer, triggerTerminationChannel, loggerMock)
-
-	wgServer.Add(2)
-	go processor.StartProcessing()
+	processor := NewProcessor(storageMock, triggerTerminationChannel, loggerMock)
 
 	go func() {
-		numbersQueue <- 123
-		close(numbersQueue)
+		numbersInQueue <- 123456
+		numbersInQueue <- 123457
+		numbersInQueue <- 123458
+		numbersInQueue <- 123459
+		numbersInQueue <- 123456
+		numbersInQueue <- 123457
+		numbersInQueue <- 123458
+		numbersInQueue <- 123460
+
+		triggerReportChannel <- time.Time{}
+
+		close(triggerReportChannel)
+		close(numbersInQueue) // may cause error
 	}()
 
-	wgServer.Wait()
+	fmt.Println(&numbersInQueue)
 
-	if processor.uniqNumbersProcessedFromLastReport != 1 {
-		t.Errorf("Before report amount of uniq numbers processes from last report should be 1, got %d", processor.uniqNumbersProcessedFromLastReport)
+	go processor.ProcessChannel(numbersInQueue, numbersOutQueue, triggerReportChannel, reportsQueue)
+
+	var reports []ReportDTO
+
+	for report := range reportsQueue {
+		reports = append(reports, report)
 	}
 
-	if processor.duplicateNumbersProcessesFromLastReport != 0 {
-		t.Errorf("Before report amount of duplicate numbers processes from last report should be 0, got %d", processor.duplicateNumbersProcessesFromLastReport)
+	resultMap := make(map[uint64]bool)
+
+	for number := range numbersOutQueue {
+		resultMap[number] = true
 	}
 
-	processor.DoReport()
+	if len(reports) == 1 {
 
-	if reporterMock.CalledTimes != 1 {
-		t.Errorf("After report reporter mast be called 1 times, got %d", reporterMock.CalledTimes)
+		report := reports[0]
+
+		if report.AllNumbersTotal != 8 {
+			t.Errorf("Report: Expected to have total = %d in report, got %d", 8, report.AllNumbersTotal)
+		}
+
+		if report.UniqNumbersFromLastReport != 5 {
+			t.Errorf("Report: Expected to have uniqNumbersFromLastReport = %d in report, got %d", 5, report.UniqNumbersFromLastReport)
+		}
+
+		if report.UniqNumbersTotal != 5 {
+			t.Errorf("Report: Expected to have uniqNumbersTotal = %d in report, got %d", 5, report.UniqNumbersTotal)
+		}
+
+		if report.DuplicateNumbersFromLastReport != 3 {
+			t.Errorf("Report: Expected to have duplicateNumbersFromLastReport = %d in report, got %d", 3, report.DuplicateNumbersFromLastReport)
+		}
+
+	} else {
+		t.Errorf("Report: Expected to have %d report, got %d", 1, len(reports))
+		t.Errorf("Report: Unexpected issue")
 	}
 
-	if processor.uniqNumbersProcessedFromLastReport != 0 {
-		t.Errorf("After report amount of uniq numbers processes from last report should be 0, got %d", processor.uniqNumbersProcessedFromLastReport)
+	if len(resultMap) != 5 {
+		t.Errorf("Expected to have %d elements in the out queue, got %d", 5, len(resultMap))
 	}
 
-	if processor.duplicateNumbersProcessesFromLastReport != 0 {
-		t.Errorf("After report amount of duplicate numbers processes from last report should be 0, got %d", processor.duplicateNumbersProcessesFromLastReport)
+	if storageMock.MethodCalledTimes("IsNumberExists") != 8 {
+		t.Errorf("Expected to call Storage method IsNumberExists %d times, got %d", 9, storageMock.MethodCalledTimes("IsNumberExists"))
+	}
+
+	if storageMock.MethodCalledTimes("AddNumber") != 5 {
+		t.Errorf("Expected to call Storage method AddNumber %d times, got %d", 5, storageMock.MethodCalledTimes("AddNumber"))
+	}
+
+	assertMethodAddNumberWasCalledWithValueTimes(storageMock, 123456, 1, t)
+	assertMethodAddNumberWasCalledWithValueTimes(storageMock, 123457, 1, t)
+	assertMethodAddNumberWasCalledWithValueTimes(storageMock, 123458, 1, t)
+	assertMethodAddNumberWasCalledWithValueTimes(storageMock, 123459, 1, t)
+	assertMethodAddNumberWasCalledWithValueTimes(storageMock, 123460, 1, t)
+
+	assertMethodIsNumberExistsWasCalledWithValueTimes(storageMock, 123456, 2, t)
+	assertMethodIsNumberExistsWasCalledWithValueTimes(storageMock, 123457, 2, t)
+	assertMethodIsNumberExistsWasCalledWithValueTimes(storageMock, 123458, 2, t)
+	assertMethodIsNumberExistsWasCalledWithValueTimes(storageMock, 123459, 1, t)
+	assertMethodIsNumberExistsWasCalledWithValueTimes(storageMock, 123460, 1, t)
+
+	assertNumberInTheMap(resultMap, 123456, t)
+	assertNumberInTheMap(resultMap, 123457, t)
+	assertNumberInTheMap(resultMap, 123458, t)
+	assertNumberInTheMap(resultMap, 123459, t)
+	assertNumberInTheMap(resultMap, 123460, t)
+}
+
+func assertMethodAddNumberWasCalledWithValueTimes(checkingMap *NumberStorageMock, number uint64, times uint64, t *testing.T) {
+	if checkingMap.MethodCalledTimesWithValue("AddNumber", number) != times {
+		t.Errorf("Storage method AddNumber expected to be called %d times with number %d, got %d", times, number, checkingMap.MethodCalledTimesWithValue("AddNumber", number))
 	}
 }
 
-func TestProcessor_StartProcessing(t *testing.T) {
-	wgServer := sync.WaitGroup{}
-	reporterMock := mock.NewMockReporter(10 * time.Second)
-	loggerMock := mock2.NewMockLogger()
-	dumperMock := mock3.NewMockDumper(&wgServer)
-	storage := memory.NewNumberStorage()
-	numbersQueue := make(chan uint64, 100)
-	triggerTerminationChannel := make(chan string)
-
-	processor := NewProcessor(numbersQueue, storage, reporterMock, dumperMock, &wgServer, triggerTerminationChannel, loggerMock)
-
-	wgServer.Add(2)
-	go processor.StartProcessing()
-
-	go func() {
-		numbersQueue <- 123456789
-		numbersQueue <- 223456789
-		numbersQueue <- 323456789
-		numbersQueue <- 423456789
-		numbersQueue <- 123456789
-		numbersQueue <- 223456789
-		numbersQueue <- 323456789
-		numbersQueue <- 423456789
-		numbersQueue <- 523456789
-		close(numbersQueue)
-	}()
-
-	wgServer.Wait()
-
-	numberShouldBeInTheStorage(storage,123456789, t)
-	numberShouldBeInTheStorage(storage,223456789, t)
-	numberShouldBeInTheStorage(storage,323456789, t)
-	numberShouldBeInTheStorage(storage,423456789, t)
-	numberShouldBeInTheStorage(storage,523456789, t)
-
-	if storage.GetLength() != 5 {
-		t.Errorf("Storage length should be 5, got %d", storage.GetLength())
-	}
-
-	if len(dumperMock.NumbersDumped) != 5 {
-		t.Errorf("Dumper should dump 5 numbers, got %d", len(dumperMock.NumbersDumped))
-	}
-
-	if processor.uniqNumbersProcessedFromLastReport != 5 {
-		t.Errorf("Before report amount of uniq numbers processes from last report should be 5, got %d", processor.uniqNumbersProcessedFromLastReport)
-	}
-
-	if processor.duplicateNumbersProcessesFromLastReport != 4 {
-		t.Errorf("Before report amount of duplicate numbers processes from last report should be 4, got %d", processor.duplicateNumbersProcessesFromLastReport)
+func assertMethodIsNumberExistsWasCalledWithValueTimes(checkingMap *NumberStorageMock, number uint64, times uint64, t *testing.T) {
+	if checkingMap.MethodCalledTimesWithValue("IsNumberExists", number) != times {
+		t.Errorf("Storage method IsNumberExists expected to be called %d times with number %d, got %d", times, number, checkingMap.MethodCalledTimesWithValue("IsNumberExists", number))
 	}
 }
 
-func numberShouldBeInTheStorage(storage NumberStorageInterface, number uint64, t *testing.T) {
-	if !storage.IsNumberExists(number) {
-		t.Errorf("Number %d should be in the storage and it is not", number)
+func assertNumberInTheMap(checkingMap map[uint64]bool, number uint64, t *testing.T) {
+	if !isNumberInTheMap(checkingMap, number) {
+		t.Errorf("Number %d expected to be in the out queue, but it is not", number)
 	}
+}
+
+func isNumberInTheMap(checkingMap map[uint64]bool, number uint64) bool {
+	if val, ok := checkingMap[number]; ok {
+		return val
+	}
+
+	return false
 }

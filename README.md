@@ -37,10 +37,6 @@ clone this project to folder number-server into your $GOPATH and build
 
 `./number_server -max-clients=3` - will set max concurrent clients to 3
 
-## Code structure
-
-![code_structure](resources/images/code_structure.png)
-
 ## Application design
 
 ![application_design](resources/images/application_design.png)

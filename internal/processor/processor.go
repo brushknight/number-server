@@ -17,7 +17,7 @@ type Processor struct {
 	duplicateNumbersProcessesFromLastReport uint64
 }
 
-func (p *Processor) ProcessChannel(numbersQueue chan uint64, dumperQueue chan uint64, reportTriggerChannel <-chan time.Time, reportsQueue chan reporter.ReportDTO) {
+func (p *Processor) ProcessChannel(numbersQueue chan uint64, dumperQueue chan uint64, reportTriggerChannel <-chan time.Time, reportsQueue chan reporter.ReportDTO, triggerTerminationChannel chan string) {
 	defer close(dumperQueue)
 	defer close(reportsQueue)
 
@@ -38,11 +38,11 @@ func (p *Processor) ProcessChannel(numbersQueue chan uint64, dumperQueue chan ui
 
 				if err != nil {
 					p.logger.Error(fmt.Sprintf("%e", err))
-					p.terminate(fmt.Sprintf("%e", err))
+					p.terminate(triggerTerminationChannel, fmt.Sprintf("%e", err))
 				}
 				if !status {
 					p.logger.Error(fmt.Sprintf("number was not inserted %d", number))
-					p.terminate(fmt.Sprintf("number was not inserted %d", number))
+					p.terminate(triggerTerminationChannel, fmt.Sprintf("number was not inserted %d", number))
 				}
 
 				dumperQueue <- number
@@ -67,8 +67,8 @@ func (p *Processor) doReport(reportsQueue chan reporter.ReportDTO) {
 	p.duplicateNumbersProcessesFromLastReport = 0
 }
 
-func (p *Processor) terminate(reason string) {
-	terminator.Terminate("Processor", reason)
+func (p *Processor) terminate(triggerTerminationChannel chan string, reason string) {
+	terminator.Terminate(triggerTerminationChannel, "Processor", reason)
 }
 
 func NewProcessor(storage storage2.NumberStorageInterface, logger logrus.Ext1FieldLogger) *Processor {

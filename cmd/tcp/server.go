@@ -24,14 +24,14 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 	l, err := net.Listen("tcp4", s.interfaceToListen)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("%e", err))
-		terminator.Terminate("Server", fmt.Sprintf("%e", err))
+		terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
 		return
 	}
 	defer func() {
 		err := l.Close()
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("%e", err))
-			terminator.Terminate("Server", fmt.Sprintf("%e", err))
+			terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
 		}
 	}()
 
@@ -51,7 +51,7 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("%e", err))
-			terminator.Terminate("Server", fmt.Sprintf("%e", err))
+			terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
 			continue
 		}
 
@@ -59,7 +59,7 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 			err := c.Close()
 			if err != nil {
 				s.logger.Error(fmt.Sprintf("%e", err))
-				terminator.Terminate("Server", fmt.Sprintf("%e", err))
+				terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
 			}
 
 			s.logger.Debug(fmt.Sprintf("Maximum of %d clients reached: %d", s.maxClientsCount, clientsCounter))
@@ -70,17 +70,17 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 		atomic.AddInt64(&clientsCounter, 1)
 		s.logger.Debug(fmt.Sprintf("Clients count: %d", clientsCounter))
 
-		go s.handleConnection(handler, c, &clientsCounter)
+		go s.handleConnection(handler, c, &clientsCounter, triggerTerminationChannel)
 	}
 }
 
-func (s *Server) handleConnection(handler handler.MessageHandlerInterface, c net.Conn, clientsCounter *int64) {
+func (s *Server) handleConnection(handler handler.MessageHandlerInterface, c net.Conn, clientsCounter *int64, triggerTerminationChannel chan string) {
 
 	defer func() {
 		err := c.Close()
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("%e", err))
-			terminator.Terminate("Server", fmt.Sprintf("%e", err))
+			terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
 		}
 	}()
 	defer atomic.AddInt64(clientsCounter, -1)
@@ -104,13 +104,13 @@ func (s *Server) handleConnection(handler handler.MessageHandlerInterface, c net
 			}
 
 			s.logger.Error(fmt.Sprintf("Error: %e", err))
-			terminator.Terminate("Server", fmt.Sprintf("%e", err))
+			terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
 			break
 		}
 
 		message := strings.TrimSpace(rowData)
 		if message == "terminate" {
-			terminator.Terminate("Server", "termination sequence received")
+			terminator.Terminate(triggerTerminationChannel, "Server", "termination sequence received")
 			return
 		}
 

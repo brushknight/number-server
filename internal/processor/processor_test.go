@@ -19,6 +19,7 @@ func TestProcessor_ProcessChannel(t *testing.T) {
 	numbersOutQueue := make(chan uint64, 100)
 	reportsQueue := make(chan reporter.ReportDTO)
 	triggerReportChannel := make(chan time.Time)
+	triggerTerminationChannel := make(chan string)
 
 	processor := NewProcessor(storageMock, loggerMock)
 
@@ -40,7 +41,7 @@ func TestProcessor_ProcessChannel(t *testing.T) {
 
 	fmt.Println(&numbersInQueue)
 
-	go processor.ProcessChannel(numbersInQueue, numbersOutQueue, triggerReportChannel, reportsQueue)
+	go processor.ProcessChannel(numbersInQueue, numbersOutQueue, triggerReportChannel, reportsQueue, triggerTerminationChannel)
 
 	var reports []reporter.ReportDTO
 

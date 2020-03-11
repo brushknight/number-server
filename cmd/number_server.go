@@ -39,16 +39,16 @@ func CreateServerAndStart(maxClientsCount int, reporterTimeout int, interfaceToS
 
 	logger := logrus.New()
 
-	if env == "dev"{
+	if env == "dev" {
 		logger.SetLevel(logrus.TraceLevel)
-	}else{
+	} else {
 		logger.SetLevel(logrus.InfoLevel)
 	}
 
 	wgServer := sync.WaitGroup{}
 
 	storage := storage2.NewNumberStorage()
-	go terminator.WatchForTermination(terminationChannel, numbersQueue, logger)
+	go terminator.WatchForTermination(triggerTerminationChannel, terminationChannel, numbersQueue, logger)
 	logger.Debug("[✔] Application terminator created")
 
 	handler := handler2.NewMessageHandler(numbersQueue)
@@ -80,7 +80,7 @@ func CreateServerAndStart(maxClientsCount int, reporterTimeout int, interfaceToS
 	go func() {
 		defer wgServer.Done()
 		defer reportTriggerTicker.Stop()
-		processor.ProcessChannel(numbersQueue, dumperQueue, reportTriggerTicker.C, reportsQueue)
+		processor.ProcessChannel(numbersQueue, dumperQueue, reportTriggerTicker.C, reportsQueue, triggerTerminationChannel)
 	}()
 	logger.Debug("[✔] Message processor started")
 

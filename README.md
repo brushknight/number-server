@@ -10,7 +10,7 @@ This is an application that opens a socket and restricts input to at most 5 conc
 clone this project to folder number-server into your $GOPATH and build
 1. `git clone git@github.com:brushknight/number-server.git ~/go/src/number-server`
 2. `cd ./number-server`
-3. `go build number_server.go`
+3. `go build -o ./numebr_server main.go`
 
 ## Tests
 1. `go test ./...`

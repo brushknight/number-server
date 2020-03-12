@@ -10,7 +10,7 @@ import (
 	processor2 "number-server/internal/processor"
 	"number-server/internal/reporter"
 	storage2 "number-server/internal/storage"
-	"number-server/internal/terminator"
+	"number-server/pkg"
 	"os"
 	"sync"
 	"time"
@@ -48,7 +48,9 @@ func CreateServerAndStart(maxClientsCount int, reporterTimeout int, interfaceToS
 	wgServer := sync.WaitGroup{}
 
 	storage := storage2.NewNumberStorage()
-	go terminator.WatchForTermination(triggerTerminationChannel, terminationChannel, numbersQueue, logger)
+	terminator := pkg.NewTerminator()
+
+	go terminator.WatchForTermination(terminationChannel, numbersQueue, logger)
 	logger.Debug("[✔] Application terminator created")
 
 	handler := handler2.NewMessageHandler(numbersQueue)
@@ -84,7 +86,7 @@ func CreateServerAndStart(maxClientsCount int, reporterTimeout int, interfaceToS
 	}()
 	logger.Debug("[✔] Message processor started")
 
-	server := tcp.NewServer(interfaceToStart, int64(maxClientsCount), triggerTerminationChannel, terminationChannel, logger)
+	server := tcp.NewServer(interfaceToStart, int64(maxClientsCount), triggerTerminationChannel, terminationChannel, logger, terminator)
 	logger.Debug("[✔] Server created")
 
 	go server.StartListening(handler, triggerTerminationChannel)

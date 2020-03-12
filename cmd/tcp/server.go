@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net"
+	"number-server/cmd"
 	"number-server/cmd/handler"
-	"number-server/internal/terminator"
 	"strings"
 	"sync/atomic"
 )
@@ -17,6 +17,7 @@ type Server struct {
 	maxClientsCount           int64
 	triggerTerminationChannel chan string
 	terminationChannel        chan struct{}
+	terminator                cmd.TerminationInterface
 }
 
 func (s *Server) StartListening(handler handler.MessageHandlerInterface, triggerTerminationChannel chan string) {
@@ -24,14 +25,14 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 	l, err := net.Listen("tcp4", s.interfaceToListen)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("%e", err))
-		terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
+		s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
 		return
 	}
 	defer func() {
 		err := l.Close()
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("%e", err))
-			terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
+			s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
 		}
 	}()
 
@@ -51,7 +52,7 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("%e", err))
-			terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
+			s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
 			continue
 		}
 
@@ -59,7 +60,7 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 			err := c.Close()
 			if err != nil {
 				s.logger.Error(fmt.Sprintf("%e", err))
-				terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
+				s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
 			}
 
 			s.logger.Debug(fmt.Sprintf("Maximum of %d clients reached: %d", s.maxClientsCount, clientsCounter))
@@ -80,7 +81,7 @@ func (s *Server) handleConnection(handler handler.MessageHandlerInterface, c net
 		err := c.Close()
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("%e", err))
-			terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
+			s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
 		}
 	}()
 	defer atomic.AddInt64(clientsCounter, -1)
@@ -104,13 +105,13 @@ func (s *Server) handleConnection(handler handler.MessageHandlerInterface, c net
 			}
 
 			s.logger.Error(fmt.Sprintf("Error: %e", err))
-			terminator.Terminate(triggerTerminationChannel, "Server", fmt.Sprintf("%e", err))
+			s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
 			break
 		}
 
 		message := strings.TrimSpace(rowData)
 		if message == "terminate" {
-			terminator.Terminate(triggerTerminationChannel, "Server", "termination sequence received")
+			s.terminator.Terminate("Server", "termination sequence received")
 			return
 		}
 
@@ -131,11 +132,12 @@ func (s *Server) handleConnection(handler handler.MessageHandlerInterface, c net
 	}
 }
 
-func NewServer(interfaceToListen string, maxClientsCount int64, triggerTerminationChannel chan string, terminationChannel chan struct{}, logger logrus.Ext1FieldLogger) *Server {
+func NewServer(interfaceToListen string, maxClientsCount int64, triggerTerminationChannel chan string, terminationChannel chan struct{}, logger logrus.Ext1FieldLogger, terminator cmd.TerminationInterface) *Server {
 	return &Server{
 		interfaceToListen:         interfaceToListen,
 		maxClientsCount:           maxClientsCount,
 		triggerTerminationChannel: triggerTerminationChannel,
 		terminationChannel:        terminationChannel,
-		logger:                    logger}
+		logger:                    logger,
+		terminator:                terminator}
 }

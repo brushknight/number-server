@@ -6,7 +6,7 @@ This application connects to TCP [server](https://github.com/brushknight/number-
 This is a [server](https://github.com/brushknight/number-server) that opens a socket and restricts input to at most 5 concurrent clients. Clients will connect to the Application and write any number of 9 digit numbers, and then close the connection. The Application must write a de-duplicated list of these numbers to a log file in no particular order.
 
 ## Prepare (build)
-1. `go build  -o ./number_server_client main.go`
+1. `make compile_client`
 
 ## Run
 1. `./number_server_client` 

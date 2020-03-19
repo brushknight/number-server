@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package grpc_protocol;
+
+service NumberServer {
+    rpc SendMessage (NumberMessage) returns (Empty) {}
+}
+
+message NumberMessage {
+    string number = 1;
+}
+
+message Empty {
+
+}

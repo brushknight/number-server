@@ -11,7 +11,7 @@ clone this project to folder number-server into your $GOPATH and build
 1. `git clone git@github.com:brushknight/number-server.git ~/go/src/number-server`
 2. `cd ./number-server`
 3. `go get ./...`
-4. `go build -o ./numebr_server main.go`
+4. `make compile_server`
 
 ## Tests
 1. `go test ./...`

@@ -5,6 +5,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"number-server/internal/reporter"
 	"number-server/internal/storage"
+	"number-server/pkg"
 	"testing"
 	"time"
 )
@@ -19,9 +20,9 @@ func TestProcessor_ProcessChannel(t *testing.T) {
 	numbersOutQueue := make(chan uint64, 100)
 	reportsQueue := make(chan reporter.ReportDTO)
 	triggerReportChannel := make(chan time.Time)
-	triggerTerminationChannel := make(chan string)
+	terminator := pkg.NewTerminator()
 
-	processor := NewProcessor(storageMock, loggerMock)
+	processor := NewProcessor(storageMock, terminator, loggerMock)
 
 	go func() {
 		numbersInQueue <- 123456
@@ -41,7 +42,7 @@ func TestProcessor_ProcessChannel(t *testing.T) {
 
 	fmt.Println(&numbersInQueue)
 
-	go processor.ProcessChannel(numbersInQueue, numbersOutQueue, triggerReportChannel, reportsQueue, triggerTerminationChannel)
+	go processor.ProcessChannel(numbersInQueue, numbersOutQueue, triggerReportChannel, reportsQueue)
 
 	var reports []reporter.ReportDTO
 

@@ -1,42 +1,40 @@
-package tcp
+package cmd
 
 import (
 	"bufio"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net"
-	"number-server/cmd"
-	"number-server/cmd/handler"
 	"strings"
 	"sync/atomic"
 )
 
-type Server struct {
+type TcpServer struct {
 	logger                    logrus.Ext1FieldLogger
 	interfaceToListen         string
 	maxClientsCount           int64
 	triggerTerminationChannel chan string
 	terminationChannel        chan struct{}
-	terminator                cmd.TerminationInterface
+	terminator                TerminationInterface
 }
 
-func (s *Server) StartListening(handler handler.MessageHandlerInterface, triggerTerminationChannel chan string) {
+func (s *TcpServer) StartListening(handler MessageHandlerInterface, triggerTerminationChannel chan string) {
 
 	l, err := net.Listen("tcp4", s.interfaceToListen)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("%e", err))
-		s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
+		s.terminator.Terminate("TcpServer", fmt.Sprintf("%e", err))
 		return
 	}
 	defer func() {
 		err := l.Close()
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("%e", err))
-			s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
+			s.terminator.Terminate("TcpServer", fmt.Sprintf("%e", err))
 		}
 	}()
 
-	s.logger.Debug(fmt.Sprintf("[✔] Server started serving on %s, max %d clients", s.interfaceToListen, s.maxClientsCount))
+	s.logger.Debug(fmt.Sprintf("[✔] TcpServer started serving on %s, max %d clients", s.interfaceToListen, s.maxClientsCount))
 
 	var clientsCounter int64
 
@@ -52,7 +50,7 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("%e", err))
-			s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
+			s.terminator.Terminate("TcpServer", fmt.Sprintf("%e", err))
 			continue
 		}
 
@@ -60,7 +58,7 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 			err := c.Close()
 			if err != nil {
 				s.logger.Error(fmt.Sprintf("%e", err))
-				s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
+				s.terminator.Terminate("TcpServer", fmt.Sprintf("%e", err))
 			}
 
 			s.logger.Debug(fmt.Sprintf("Maximum of %d clients reached: %d", s.maxClientsCount, clientsCounter))
@@ -75,13 +73,13 @@ func (s *Server) StartListening(handler handler.MessageHandlerInterface, trigger
 	}
 }
 
-func (s *Server) handleConnection(handler handler.MessageHandlerInterface, c net.Conn, clientsCounter *int64, triggerTerminationChannel chan string) {
+func (s *TcpServer) handleConnection(handler MessageHandlerInterface, c net.Conn, clientsCounter *int64, triggerTerminationChannel chan string) {
 
 	defer func() {
 		err := c.Close()
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("%e", err))
-			s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
+			s.terminator.Terminate("TcpServer", fmt.Sprintf("%e", err))
 		}
 	}()
 	defer atomic.AddInt64(clientsCounter, -1)
@@ -105,13 +103,13 @@ func (s *Server) handleConnection(handler handler.MessageHandlerInterface, c net
 			}
 
 			s.logger.Error(fmt.Sprintf("Error: %e", err))
-			s.terminator.Terminate("Server", fmt.Sprintf("%e", err))
+			s.terminator.Terminate("TcpServer", fmt.Sprintf("%e", err))
 			break
 		}
 
 		message := strings.TrimSpace(rowData)
 		if message == "terminate" {
-			s.terminator.Terminate("Server", "termination sequence received")
+			s.terminator.Terminate("TcpServer", "termination sequence received")
 			return
 		}
 
@@ -132,8 +130,8 @@ func (s *Server) handleConnection(handler handler.MessageHandlerInterface, c net
 	}
 }
 
-func NewServer(interfaceToListen string, maxClientsCount int64, triggerTerminationChannel chan string, terminationChannel chan struct{}, logger logrus.Ext1FieldLogger, terminator cmd.TerminationInterface) *Server {
-	return &Server{
+func NewServer(interfaceToListen string, maxClientsCount int64, triggerTerminationChannel chan string, terminationChannel chan struct{}, logger logrus.Ext1FieldLogger, terminator TerminationInterface) *TcpServer {
+	return &TcpServer{
 		interfaceToListen:         interfaceToListen,
 		maxClientsCount:           maxClientsCount,
 		triggerTerminationChannel: triggerTerminationChannel,

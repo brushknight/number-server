@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"number-server/cmd/tcp"
 	"number-server/internal/dumper"
 	handler2 "number-server/internal/handler"
 	processor2 "number-server/internal/processor"
@@ -76,18 +75,18 @@ func CreateServerAndStart(maxClientsCount int, reporterTimeout int, interfaceToS
 	}()
 
 	wgServer.Add(1)
-	processor := processor2.NewProcessor(storage, logger)
+	processor := processor2.NewProcessor(storage, terminator, logger)
 	logger.Debug("[✔] Message processor created")
 
 	go func() {
 		defer wgServer.Done()
 		defer reportTriggerTicker.Stop()
-		processor.ProcessChannel(numbersQueue, dumperQueue, reportTriggerTicker.C, reportsQueue, triggerTerminationChannel)
+		processor.ProcessChannel(numbersQueue, dumperQueue, reportTriggerTicker.C, reportsQueue)
 	}()
 	logger.Debug("[✔] Message processor started")
 
-	server := tcp.NewServer(interfaceToStart, int64(maxClientsCount), triggerTerminationChannel, terminationChannel, logger, terminator)
-	logger.Debug("[✔] Server created")
+	server := NewServer(interfaceToStart, int64(maxClientsCount), triggerTerminationChannel, terminationChannel, logger, terminator)
+	logger.Debug("[✔] TcpServer created")
 
 	go server.StartListening(handler, triggerTerminationChannel)
 
